@@ -24,7 +24,8 @@ eksctl create iamserviceaccount \
   --cluster eks-cluster \
   --region ap-south-1 \
   --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
-  --approve
+  --approve \
+  --override-existing-serviceaccounts
 ```
 ✅ This creates:
 
@@ -74,7 +75,7 @@ kubectl get pods -n kube-system | grep ebs
 kubectl get sc
 ```
 
-💾 Step 6: Make gp3 Default (Recommended)
+💾 Step 6: Make gp3 Default (Recommended) this step is OPTIONAL: Only required if gp2 already exists and is default
 ```
 kubectl patch storageclass gp2 \
   -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
