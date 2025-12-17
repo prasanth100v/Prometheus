@@ -127,4 +127,29 @@ helm upgrade --install prometheus prometheus-community/prometheus \
 kubectl get pvc -n monitoring
 kubectl get pods -n monitoring
 ```
+🔹Access Prometheus UI (via LoadBalancer)
+  ✏️ Edit Prometheus Service
+  ```
+kubectl edit svc prometheus-server -n monitoring
+```
+🔄 Change this:
+```
+spec:
+  type: ClusterIP  -->  type: LoadBalancer
+```
+🔹Access Alertmanager UI (via LoadBalancer)
+  ✏️ Edit Alertmanager Service
+```
+kubectl edit svc prometheus-alertmanager -n monitoring
+```
+🔄 Change this:
+```
+spec:
+  type: ClusterIP  -->  type: LoadBalancer
+```
+Save and exit.
 
+🌐 Get External URL
+```
+kubectl get svc prometheus-alertmanager -n monitoring
+```
