@@ -4,12 +4,14 @@
 ```
 aws --version
 kubectl version --client
-helm version
+eksctl version
 ```
+✅ (BEST PRACTICE): Attach AmazonEBSCSIDriverPolicy using IRSA 
+  This attaches the policy only to the EBS CSI controller pod, not to all worker nodes.
 🔹 STEP 2: Enable IAM OIDC Provider (MANDATORY)
 ```
 eksctl utils associate-iam-oidc-provider \
-  --cluster <your-cluster-name> \
+  --cluster eks-cluster \
   --region ap-south-1 \
   --approve
 ```
@@ -35,13 +37,36 @@ Kubernetes ServiceAccount
 kubectl get sa ebs-csi-controller-sa -n kube-system
 kubectl describe sa ebs-csi-controller-sa -n kube-system
 ```
+Step 4: Create CSI-Based StorageClass (gp3) = Create a new StorageClass using CSI driver.
+```
+vi gp3-sc.yaml
+```
+```
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  fsType: ext4
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+```
+✅Apply
+```
+kubectl apply -f gp3-sc.yaml
+```
+
 ✅✅🚀 Step 4: Install EBS CSI Driver (Managed Add-on – Best)
 ```
 aws eks create-addon \
-  --cluster-name <cluster-name> \
+  --cluster-name eks-cluster \
   --addon-name aws-ebs-csi-driver \
   --service-account-role-arn <ROLE_ARN_CREATED_ABOVE> \
-  --region <region>
+  --region ap-south-1
 ```
 🔍 Step 5: Verify Installation
 ```
@@ -61,11 +86,6 @@ kubectl patch storageclass gp3 \
 STEP 7: Create Namespace
 ```
 kubectl create namespace monitoring
-```
-🔹 STEP 8: Add Helm Repo
-```
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
 ```
 ✅ Recommended values.yaml for Prometheus on EKS (EBS CSI)
 ```
@@ -88,39 +108,23 @@ alertmanager:
     size: 2Gi
     mountPath: /data
 ```
-
-🚀 4️⃣ Install / Upgrade Prometheus
+🔹 STEP 8: Add Helm Repo
 ```
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4
+chmod 700 get_helm.sh
+./get_helm.sh
+helm version
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
 helm upgrade --install prometheus prometheus-community/prometheus \
   -n monitoring \
   --create-namespace \
   -f values.yaml
 ```
+
 🔍 5️⃣ Verify (Very Important)
 ```
 kubectl get pvc -n monitoring
 kubectl get pods -n monitoring
 ```
 
-
-
-
-
-
-4️⃣ create EBS CSI IRSA (clean & correct) This fixes 99% of CrashLoopBackOff cases.
-```
-eksctl create iamserviceaccount \
-  --name ebs-csi-controller-sa \
-  --namespace kube-system \
-  --cluster <your-cluster-name> \
-  --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
-  --override-existing-serviceaccounts \
-  --approve
-```
-✅ This:
-
-Creates IAM role
-
-Attaches policy
-
-Annotates service account correctly
