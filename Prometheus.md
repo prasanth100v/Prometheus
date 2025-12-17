@@ -30,6 +30,11 @@ IAM role
 Trust relationship with OIDC
 Kubernetes ServiceAccount
 
+✅ Get ARN from Kubernetes ServiceAccount
+```
+kubectl get sa ebs-csi-controller-sa -n kube-system
+kubectl describe sa ebs-csi-controller-sa -n kube-system
+```
 ✅✅🚀 Step 4: Install EBS CSI Driver (Managed Add-on – Best)
 ```
 aws eks create-addon \
