@@ -24,8 +24,8 @@ Clean up the WRONG ServiceAccount
 kubectl delete sa ebs-csi-controller-saa -n kube-system
 ```
 
-🔐 Step 3: Create IAM Role for EBS CSI Driver (IRSA – Recommended)
-Create IAM Service Account
+🔐 Step 3:Create ONLY IAM ROLE (NO ServiceAccount)
+⚠️ Do NOT create Kubernetes ServiceAccount manually
 ```
 eksctl create iamserviceaccount \
   --name ebs-csi-controller-sa \
@@ -33,21 +33,43 @@ eksctl create iamserviceaccount \
   --cluster eks-cluster \
   --region ap-south-1 \
   --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
-  --approve \
-  --override-existing-serviceaccounts
+  --role-only \
+  --approve
 ```
 ✅ This creates:
-
 IAM role
-Trust relationship with OIDC
-Kubernetes ServiceAccount
+OIDC trust policy
+❌ Does NOT create ServiceAccount
 
-✅ Get ARN from Kubernetes ServiceAccount
+✅ 👉 Copy the IAM ROLE ARN from here
 ```
-kubectl get sa ebs-csi-controller-sa -n kube-system
-kubectl describe sa ebs-csi-controller-sa -n kube-system
+eksctl get iamserviceaccount \
+  --cluster eks-cluster \
+  --region ap-south-1
 ```
-Step 4: Create CSI-Based StorageClass (gp3) = Create a new StorageClass using CSI driver.
+🔹 STEP 4: Install EBS CSI Addon (Addon creates ServiceAccount)
+```
+aws eks create-addon \
+  --cluster-name eks-cluster \
+  --addon-name aws-ebs-csi-driver \
+  --service-account-role-arn <ROLE_ARN_FROM_STEP_3> \
+  --region ap-south-1 \
+  --resolve-conflicts OVERWRITE
+```
+✔ Addon will:
+
+Create ebs-csi-controller-sa
+Attach IAM role
+Set correct labels
+
+🔹 STEP 5: Verify Addon Status
+```
+aws eks describe-addon \
+  --cluster-name eks-cluster \
+  --addon-name aws-ebs-csi-driver
+```
+
+Step 6: Create CSI-Based StorageClass (gp3) = Create a new StorageClass using CSI driver.
 ```
 vi gp3-sc.yaml
 ```
@@ -69,22 +91,13 @@ allowVolumeExpansion: true
 ```
 kubectl apply -f gp3-sc.yaml
 ```
-
-✅✅🚀 Step 4: Install EBS CSI Driver (Managed Add-on – Best)
-```
-aws eks create-addon \
-  --cluster-name eks-cluster \
-  --addon-name aws-ebs-csi-driver \
-  --service-account-role-arn <ROLE_ARN_CREATED_ABOVE> \
-  --region ap-south-1
-```
-🔍 Step 5: Verify Installation
+🔍 Step 7: Verify Installation
 ```
 kubectl get pods -n kube-system | grep ebs
 kubectl get sc
 ```
 
-💾 Step 6: Make gp3 Default (Recommended) this step is OPTIONAL: Only required if gp2 already exists and is default
+💾 Step 8: Make gp3 Default (Recommended) this step is OPTIONAL: Only required if gp2 already exists and is default
 ```
 kubectl patch storageclass gp2 \
   -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
@@ -93,7 +106,7 @@ kubectl patch storageclass gp3 \
   -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 ```
 
-STEP 7: Create Namespace
+STEP 9: Create Namespace
 ```
 kubectl create namespace monitoring
 ```
@@ -118,7 +131,7 @@ alertmanager:
     size: 2Gi
     mountPath: /data
 ```
-🔹 STEP 8: Add Helm Repo
+🔹 STEP 10: Add Helm Repo
 ```
 curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4
 chmod 700 get_helm.sh
