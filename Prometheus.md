@@ -15,6 +15,15 @@ eksctl utils associate-iam-oidc-provider \
   --region ap-south-1 \
   --approve
 ```
+🔹 List all ServiceAccounts in a namespace
+```
+kubectl get serviceaccounts -n kube-system
+```
+Clean up the WRONG ServiceAccount
+```
+kubectl delete sa ebs-csi-controller-saa -n kube-system
+```
+
 🔐 Step 3: Create IAM Role for EBS CSI Driver (IRSA – Recommended)
 Create IAM Service Account
 ```
