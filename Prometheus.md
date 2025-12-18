@@ -112,7 +112,7 @@ kubectl create namespace monitoring
 ```
 ✅ Recommended values.yaml for Prometheus on EKS (EBS CSI)
 ```
-values.yaml
+vi values.yaml
 ```
 ```
 server:
